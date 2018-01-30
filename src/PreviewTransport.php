@@ -1,6 +1,6 @@
 <?php
 
-namespace MailJetLaravel;
+namespace MailjetLaravelDriver;
 
 use Illuminate\Support\Facades\Session;
 use Swift_Mime_SimpleMessage;
