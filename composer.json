@@ -1,0 +1,40 @@
+{
+    "name": "himanverma/mailjet-laravel-driver",
+    "description": "MailJet driver for laravel 5.5 and above",
+    "keywords": ["laravel", "mail","mailjet"],
+    "homepage": "https://github.com/himanverma/mailjet-laravel-driver",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Himanshu Verma",
+            "email": "himan.verma@live.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.5.9",
+        "illuminate/support": "~5.5",
+        "illuminate/mail": "~5.5",
+        "illuminate/filesystem": "~5.5"
+
+    },
+    "require-dev": {
+        "mockery/mockery": "~0.9.2|~1.0.0",
+        "phpunit/phpunit" : "~6.0",
+        "orchestra/testbench": "~3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Themsaid\\MailPreview\\": "src"
+        },
+        "classmap": [
+            "tests"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "MailJetLaravel\\MailJetServiceProvider"
+            ]
+        }
+    }
+}
