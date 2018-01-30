@@ -24,7 +24,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Themsaid\\MailPreview\\": "src"
+            "MailJetLaravel": "src"
         },
         "classmap": [
             "tests"
