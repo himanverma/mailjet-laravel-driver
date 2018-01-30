@@ -1,6 +1,6 @@
 <?php
 
-namespace Themsaid\MailPreview;
+namespace MailJetLaravel;
 
 use Illuminate\Routing\Controller as BaseController;
 

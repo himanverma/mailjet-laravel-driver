@@ -1,6 +1,6 @@
 <?php
 
-namespace Themsaid\MailPreview;
+namespace MailJetLaravel;
 
 use Illuminate\Foundation\Http\Kernel;
 use Illuminate\Mail\MailServiceProvider;

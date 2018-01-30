@@ -1,6 +1,6 @@
 <?php
 
-namespace Themsaid\MailPreview;
+namespace MailJetLaravel;
 
 use Closure;
 use Illuminate\Http\Response;
