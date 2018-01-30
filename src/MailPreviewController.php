@@ -1,6 +1,6 @@
 <?php
 
-namespace MailJetLaravel;
+namespace MailjetLaravelDriver;
 
 use Illuminate\Routing\Controller as BaseController;
 

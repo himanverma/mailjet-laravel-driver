@@ -1,6 +1,6 @@
 <?php
 
-namespace MailJetLaravel;
+namespace MailjetLaravelDriver;
 
 use Closure;
 use Illuminate\Http\Response;

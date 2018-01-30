@@ -1,6 +1,6 @@
 <?php
 
-namespace MailJetLaravel;
+namespace MailjetLaravelDriver;
 
 use Illuminate\Foundation\Http\Kernel;
 use Illuminate\Mail\MailServiceProvider;
