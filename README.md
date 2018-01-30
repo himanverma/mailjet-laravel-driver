@@ -17,6 +17,17 @@ Finally, change `MAIL_DRIVER` to `mailjet` in your `.env` file:
 
 ```
 MAIL_DRIVER=mailjet
+
+
 ```
 
 ## Package Configurations
+in services.php 
+
+add
+
+
+'mailjet' => [
+        "username" => "c1029eaf1cxxxxxxxxxxxfc3ba578",
+        "secret" => "c7c85a1254xxxxxxxxxxxxxxf8081f"
+    ]

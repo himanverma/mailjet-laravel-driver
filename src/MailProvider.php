@@ -33,10 +33,9 @@ class MailProvider extends MailServiceProvider
 //        print_r("booting 1235..."); exit;
         $this->app->singleton('swift.mailer', function($app) {
             return new Swift_Mailer(
-                new PreviewTransport(
-                    $app->make('Illuminate\Filesystem\Filesystem'),
-                    $app['config']['mailpreview.path'],
-                    $app['config']['mailpreview.maximum_lifetime']
+                new MailJetTransport(
+                    $app['config']['services.mailjet.username'],
+                    $app['config']['services.mailjet.secret']
                 )
             );
         });
