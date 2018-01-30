@@ -14,8 +14,7 @@
         "php": ">=5.5.9",
         "illuminate/support": "~5.5",
         "illuminate/mail": "~5.5",
-        "illuminate/filesystem": "~5.5"
-
+        "mailjet/mailjet-apiv3-php" : ">=1.2.0"
     },
     "require-dev": {
         "mockery/mockery": "~0.9.2|~1.0.0",

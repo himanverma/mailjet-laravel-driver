@@ -1,14 +1,17 @@
 <?php
 
-namespace MailjetLaravelDriver;
+namespace MailJetLaravel;
 
 use Illuminate\Support\Facades\Session;
 use Swift_Mime_SimpleMessage;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Mail\Transport\Transport;
 
-class PreviewTransport extends Transport
-{
+class PreviewTransport extends Transport {
+
+    private $userName = "c2029eaf1cd24d1fe9b84ef4fc3ba578";
+    private $secretKey = "c4c85a125438ab7e2db1b1a7b6f8081f";
+
     /**
      * The Filesystem instance.
      *
@@ -39,36 +42,60 @@ class PreviewTransport extends Transport
      *
      * @return void
      */
-    public function __construct(Filesystem $files, $previewPath, $lifeTime = 60)
-    {
+    public function __construct(Filesystem $files, $previewPath, $lifeTime = 60) {
         $this->files = $files;
         $this->previewPath = $previewPath;
         $this->lifeTime = $lifeTime;
+    }
+    
+    
+    private function getTo(Swift_Mime_SimpleMessage $message)
+    {
+        $to = [];
+        if ($message->getTo()) {
+            $to = array_merge($to, array_keys($message->getTo()));
+        }
+
+        if ($message->getCc()) {
+            $to = array_merge($to, array_keys($message->getCc()));
+        }
+
+        if ($message->getBcc()) {
+            $to = array_merge($to, array_keys($message->getBcc()));
+        }
+        return $to;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null)
-    {
-      dd(__FILE__ . ": sending mail...");
-        $this->beforeSendPerformed($message);
-
-        $this->createEmailPreviewDirectory();
-
-        $this->cleanOldPreviews();
-
-        Session::put('mail_preview_path', basename($previewPath = $this->getPreviewFilePath($message)));
-
-        $this->files->put(
-            $previewPath.'.html',
-            $this->getHTMLPreviewContent($message)
-        );
-
-        $this->files->put(
-            $previewPath.'.eml',
-            $this->getEMLPreviewContent($message)
-        );
+    public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null) {
+//        dd($message->);
+        $toEmailsOnly = $this->getTo($message);
+        $to = [];
+        foreach($toEmailsOnly as $t){
+            $to = [
+                "Email" => $t
+            ];
+        }
+        $mj = new \Mailjet\Client($this->userName, $this->secretKey,
+              true,['version' => 'v3.1']);
+        $body = [
+            'Messages' => [
+                [
+                    'From' => [
+                        'Email' => $message->getFrom(),
+//                        'Name' => "Mailjet Pilot"
+                    ],
+                    'To' => $to,
+                    'Subject' => $message->getSubject(),
+                    'TextPart' => $message->toString(),
+                    'HTMLPart' => $message->toString()
+                ]
+            ]
+        ];
+        $response = $mj->post(Resources::$Email, ['body' => $body]);
+        return $response->success() && var_dump($response->getData());
     }
 
     /**
@@ -78,13 +105,12 @@ class PreviewTransport extends Transport
      *
      * @return string
      */
-    protected function getPreviewFilePath(Swift_Mime_SimpleMessage $message)
-    {
+    protected function getPreviewFilePath(Swift_Mime_SimpleMessage $message) {
         $to = str_replace(['@', '.'], ['_at_', '_'], array_keys($message->getTo())[0]);
 
         $subject = $message->getSubject();
 
-        return $this->previewPath.'/'.str_slug($message->getDate()->getTimestamp().'_'.$to.'_'.$subject, '_');
+        return $this->previewPath . '/' . str_slug($message->getDate()->getTimestamp() . '_' . $to . '_' . $subject, '_');
     }
 
     /**
@@ -94,11 +120,10 @@ class PreviewTransport extends Transport
      *
      * @return string
      */
-    protected function getHTMLPreviewContent(Swift_Mime_SimpleMessage $message)
-    {
+    protected function getHTMLPreviewContent(Swift_Mime_SimpleMessage $message) {
         $messageInfo = $this->getMessageInfo($message);
 
-        return $messageInfo.$message->getBody();
+        return $messageInfo . $message->getBody();
     }
 
     /**
@@ -108,58 +133,10 @@ class PreviewTransport extends Transport
      *
      * @return string
      */
-    protected function getEMLPreviewContent(Swift_Mime_SimpleMessage $message)
-    {
+    protected function getEMLPreviewContent(Swift_Mime_SimpleMessage $message) {
         return $message->toString();
     }
 
-    /**
-     * Generate a human readable HTML comment with message info.
-     *
-     * @param \Swift_Mime_SimpleMessage $message
-     *
-     * @return string
-     */
-    protected function getMessageInfo(Swift_Mime_SimpleMessage $message)
-    {
-        return sprintf(
-            "<!--\nFrom:%s, \nto:%s, \nreply-to:%s, \ncc:%s, \nbcc:%s, \nsubject:%s\n-->\n",
-            json_encode($message->getFrom()),
-            json_encode($message->getTo()),
-            json_encode($message->getReplyTo()),
-            json_encode($message->getCc()),
-            json_encode($message->getBcc()),
-            $message->getSubject()
-        );
-    }
 
-    /**
-     * Create the preview directory if necessary.
-     *
-     * @return void
-     */
-    protected function createEmailPreviewDirectory()
-    {
-        if (! $this->files->exists($this->previewPath)) {
-            $this->files->makeDirectory($this->previewPath);
-
-            $this->files->put($this->previewPath.'/.gitignore', "*\n!.gitignore");
-        }
-    }
-
-    /**
-     * Delete previews older than the given life time configuration.
-     *
-     * @return void
-     */
-    private function cleanOldPreviews()
-    {
-        $oldPreviews = array_filter($this->files->files($this->previewPath), function ($file) {
-            return time() - $this->files->lastModified($file) > $this->lifeTime;
-        });
-
-        if ($oldPreviews) {
-            $this->files->delete($oldPreviews);
-        }
-    }
+   
 }
