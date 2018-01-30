@@ -51,7 +51,7 @@ class PreviewTransport extends Transport
      */
     public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null)
     {
-      dd(__FILE__ . ": sending...");
+      dd(__FILE__ . ": sending mail...");
         $this->beforeSendPerformed($message);
 
         $this->createEmailPreviewDirectory();
