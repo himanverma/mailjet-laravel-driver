@@ -2,7 +2,7 @@
 
 
 This package introduces a new `mailjet` mail driver for Laravel that when selected will
-sent email via MailJest SEND API
+send email via MailJet SEND API
 
 ## Installation
 
@@ -26,8 +26,11 @@ in services.php
 
 add
 
+```
 
 'mailjet' => [
         "username" => "c1029eaf1cxxxxxxxxxxxfc3ba578",
         "secret" => "c7c85a1254xxxxxxxxxxxxxxf8081f"
     ]
+
+```
