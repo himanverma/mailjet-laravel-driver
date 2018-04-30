@@ -45,6 +45,25 @@ class MailJetTransport extends Transport {
     }
 
     /**
+     * Adds Campaign from native headers to message
+     *
+     * @param Swift_Mime_SimpleMessage $message
+     * @return null
+     */
+    private function getCampaign(Swift_Mime_SimpleMessage $message)
+    {
+        foreach($message->getHeaders()->getAll() as $h)
+        {
+            if(get_class($h) == 'Swift_Mime_Headers_UnstructuredHeader' && $h->getFieldName() == 'X-Mailjet-Campaign')
+            {
+                return $h->getValue();
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null) {
@@ -67,10 +86,15 @@ class MailJetTransport extends Transport {
                     'To' => $to,
                     'Subject' => $message->getSubject(),
                     'TextPart' => $message->getBody(),
-                    'HTMLPart' => $message->getBody()
+                    'HTMLPart' => $message->getBody(),
                 ]
             ]
         ];
+        $campaign = $this->getCampaign($message);
+        if(!is_null($campaign))
+        {
+            $body['Messages'][0]['CustomCampaign'] = $campaign;
+        }
         $response = $mj->post(Resources::$Email, ['body' => $body]);
         if($response->getStatus() == 200){
             $result = $response->getBody();
