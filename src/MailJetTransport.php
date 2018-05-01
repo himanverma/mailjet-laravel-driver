@@ -6,12 +6,14 @@ use Illuminate\Support\Facades\Session;
 use Swift_Mime_SimpleMessage;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Mail\Transport\Transport;
+use Illuminate\Support\Facades\Log;
 use \Mailjet\Resources;
 
 class MailJetTransport extends Transport {
 
     private $userName;
     private $secretKey;
+    private $headers;
 
     /**
      * Create a new preview transport instance.
@@ -24,9 +26,10 @@ class MailJetTransport extends Transport {
     public function __construct($userName,$secretKey) {
         $this->userName = $userName;
         $this->secretKey = $secretKey;
+        $this->headers = [];
     }
-    
-    
+
+
     private function getTo(Swift_Mime_SimpleMessage $message)
     {
         $to = [];
@@ -45,16 +48,26 @@ class MailJetTransport extends Transport {
     }
 
     /**
-     * Adds Campaign from native headers to message
-     *
-     * @param Swift_Mime_SimpleMessage $message
+     * Gets all the headers from the message
+     * @param $message
+     * @return array
+     */
+    private function getHeaders($message)
+    {
+        $this->headers = $message->getHeaders()->getAll();
+        return $this->headers;
+    }
+
+    /**
+     * Gets a custom header by field name
+     * @param $fieldname
      * @return null
      */
-    private function getCampaign(Swift_Mime_SimpleMessage $message)
+    private function getCustomHeader($fieldname)
     {
-        foreach($message->getHeaders()->getAll() as $h)
+        foreach($this->headers as $h)
         {
-            if(get_class($h) == 'Swift_Mime_Headers_UnstructuredHeader' && $h->getFieldName() == 'X-Mailjet-Campaign')
+            if(get_class($h) == 'Swift_Mime_Headers_UnstructuredHeader' && $h->getFieldName() == $fieldname)
             {
                 return $h->getValue();
             }
@@ -67,6 +80,7 @@ class MailJetTransport extends Transport {
      * {@inheritdoc}
      */
     public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null) {
+        $headers = $this->getHeaders($message);
         $toEmailsOnly = $this->getTo($message);
         $to = [];
         foreach($toEmailsOnly as $t){
@@ -90,16 +104,31 @@ class MailJetTransport extends Transport {
                 ]
             ]
         ];
-        $campaign = $this->getCampaign($message);
+
+        $campaign = $this->getCustomHeader('X-Mailjet-Campaign');
         if(!is_null($campaign))
         {
             $body['Messages'][0]['CustomCampaign'] = $campaign;
         }
+
+        $template = $this->getCustomHeader('X-MailjetLaravel-Template');
+        if(!is_null($template))
+        {
+            $body['Messages'][0]['TemplateLanguage'] = true;
+            $body['Messages'][0]['TemplateID'] = $template;
+            $body['Messages'][0]['Variables'] = json_decode($this->getCustomHeader('X-MailjetLaravel-TemplateBody'));
+
+            //unset
+            unset($body['Messages'][0]['HTMLPart']);
+            unset($body['Messages'][0]['TextPart']);
+        }
+
         $response = $mj->post(Resources::$Email, ['body' => $body]);
         if($response->getStatus() == 200){
             $result = $response->getBody();
         }else{
-            $result =  $response->getBody();
+            $result = $response->getBody();
+            Log::error('Mailjet Error: '.json_encode($result));
         }
         return $result;
     }
