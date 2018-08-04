@@ -6,14 +6,12 @@ use Illuminate\Support\Facades\Session;
 use Swift_Mime_SimpleMessage;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Mail\Transport\Transport;
-use Illuminate\Support\Facades\Log;
 use \Mailjet\Resources;
 
 class MailJetTransport extends Transport {
 
     private $userName;
     private $secretKey;
-    private $headers;
 
     /**
      * Create a new preview transport instance.
@@ -26,70 +24,68 @@ class MailJetTransport extends Transport {
     public function __construct($userName,$secretKey) {
         $this->userName = $userName;
         $this->secretKey = $secretKey;
-        $this->headers = [];
     }
-
-
-    private function getTo(Swift_Mime_SimpleMessage $message)
-    {
-        $to = [];
-        if ($message->getTo()) {
-            $to = array_merge($to, array_keys($message->getTo()));
-        }
-
-        if ($message->getCc()) {
-            $to = array_merge($to, array_keys($message->getCc()));
-        }
-
-        if ($message->getBcc()) {
-            $to = array_merge($to, array_keys($message->getBcc()));
-        }
-        return $to;
-    }
-
-    /**
-     * Gets all the headers from the message
-     * @param $message
-     * @return array
-     */
-    private function getHeaders($message)
-    {
-        $this->headers = $message->getHeaders()->getAll();
-        return $this->headers;
-    }
-
-    /**
-     * Gets a custom header by field name
-     * @param $fieldname
-     * @return null
-     */
-    private function getCustomHeader($fieldname)
-    {
-        foreach($this->headers as $h)
-        {
-            if(get_class($h) == 'Swift_Mime_Headers_UnstructuredHeader' && $h->getFieldName() == $fieldname)
-            {
-                return $h->getValue();
-            }
-        }
-
-        return null;
-    }
-
+    
     /**
      * {@inheritdoc}
      */
     public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null) {
-        $headers = $this->getHeaders($message);
-        $toEmailsOnly = $this->getTo($message);
         $to = [];
-        foreach($toEmailsOnly as $t){
-            $to[] = [
-                "Email" => $t
-            ];
+        $_to = $message->getTo();
+        if (count($_to) > 0) {
+            foreach ($_to as $key => $val) {
+                array_push($to, [
+                    'Email' => $key,
+                    'Name' => $key
+                    ]);
+            }
+        }
+        $cc = [];
+        $_cc = $message->getCc();
+        if ($_cc && count($_cc) > 0) {
+            foreach ($_cc as $key => $val) {
+                array_push($cc, [
+                    'Email' => $key,
+                    'Name' => $key
+                    ]);
+            }
+        } else {
+            $_cc = [];
+        }
+        $bcc = [];
+        $_bcc = $message->getBcc();
+        if ($_bcc && count($_bcc) > 0) {
+            foreach ($_bcc as $key => $val) {
+                array_push($bcc, [
+                    'Email' => $key,
+                    'Name' => $key
+                    ]);
+            }
+        } else {
+            $_bcc = [];
         }
         $mj = new \Mailjet\Client($this->userName, $this->secretKey,
-              true,['version' => 'v3.1']);
+              true, ['version' => 'v3.1']);
+
+        $textpart = null;
+        $attachments = [];
+        if (count($children = $message->getChildren()) > 0) {
+            $i = 0;
+            foreach ($children as $child) {
+                if ($i++ == 0 && $child->getContentType() == 'text/plain') {
+                    $textpart = $child->getBody();
+                    continue;
+                }
+                $newattachment = [];
+                $newattachment['ContentType']   = $child->getContentType();
+                $newattachment['Filename']      = $child->getFilename();
+                $newattachment['Base64Content'] = base64_encode($child->getBody());
+                array_push($attachments, $newattachment);
+            }
+        }
+        if (!$textpart) {
+            $textpart = $message->getBody();
+        }
         $body = [
             'Messages' => [
                 [
@@ -98,39 +94,23 @@ class MailJetTransport extends Transport {
                         'Name' => array_values($message->getFrom())[0]
                     ],
                     'To' => $to,
+                    'Cc' => $cc,
+                    'Bcc' => $bcc,
                     'Subject' => $message->getSubject(),
-                    'TextPart' => $message->getBody(),
+                    'TextPart' => $textpart,
                     'HTMLPart' => $message->getBody(),
+                    'Attachments' => $attachments
                 ]
             ]
         ];
-
-        $campaign = $this->getCustomHeader('X-Mailjet-Campaign');
-        if(!is_null($campaign))
-        {
-            $body['Messages'][0]['CustomCampaign'] = $campaign;
-        }
-
-        $template = $this->getCustomHeader('X-MailjetLaravel-Template');
-        if(!is_null($template))
-        {
-            $body['Messages'][0]['TemplateLanguage'] = true;
-            $body['Messages'][0]['TemplateID'] = $template;
-            $body['Messages'][0]['Variables'] = json_decode($this->getCustomHeader('X-MailjetLaravel-TemplateBody'));
-
-            //unset
-            unset($body['Messages'][0]['HTMLPart']);
-            unset($body['Messages'][0]['TextPart']);
-        }
-
         $response = $mj->post(Resources::$Email, ['body' => $body]);
-        if($response->getStatus() == 200){
+        if ($response->getStatus() == 200) {
             $result = $response->getBody();
-        }else{
-            $result = $response->getBody();
-            Log::error('Mailjet Error: '.json_encode($result));
+        } else { 
+            $result =  $response->getBody();
         }
         return $result;
     }
 
 }
+
